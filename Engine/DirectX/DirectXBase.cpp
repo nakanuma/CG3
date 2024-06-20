@@ -448,6 +448,7 @@ void DirectXBase::CreatePipelineStateObject()
 	result = device_->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineStateBlendModeScreen_));
 
 
+
 	// アウトライン用のCullModeだけが違うPSOを作成
 	graphicsPipelineStateDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
 	// 生成

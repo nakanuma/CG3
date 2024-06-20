@@ -25,6 +25,22 @@ struct DirectionalLight {
 	float intensity; // 輝度
 };
 
+enum BlendMode {
+	kBlendModeNormal,
+	kBlendModeAdd,
+	kBlendModeSubtract,
+	kBlendModeMultiply,
+	kBlendModeScreen
+};
+
+const char* BlendModeNames[5] = {
+	"kBlendModeNormal",
+	"kBlendModeAdd",
+	"kBlendModeSubtract",
+	"kBlendModeMultiply",
+	"kBlendModeScreen"
+};
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3DResourceLeakChecker::GetInstance();
@@ -184,10 +200,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{0.0f, 0.0f, 0.0f}
 	};
 
-	// 三角形を利用した演出
-	Emitter emitter;
-	// 演出を行うかどうかのフラグ
-	bool isActiveParticle = false;
+	// 選択されたブレンドモードを保存する変数
+	static BlendMode selectedBlendMode = kBlendModeNormal;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (!Window::ProcessMessage()) {
@@ -234,6 +248,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("scale", &plane.transform_.scale.x, 0.01f);
 		ImGui::ColorEdit4("color", &plane.materialCB_.data_->color.x);
 		ImGui::DragFloat("Intensity", &directionalLightData->intensity, 0.01f);
+		if (ImGui::BeginCombo("Blend", BlendModeNames[selectedBlendMode])) {
+			for (int n = 0; n < 5; n++) {
+				const bool isSelected = (selectedBlendMode == n);
+				if (ImGui::Selectable(BlendModeNames[n], isSelected))
+					selectedBlendMode = static_cast<BlendMode>(n);
+				if (isSelected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
 		ImGui::End();
 
 		//////////////////////////////////////////////////////
@@ -251,7 +275,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓ ここから3Dオブジェクトの描画コマンド
 		/// 
 
-		/*dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateBlendModeAdd());*/
+		// 選択されたブレンドモードに変更
+		switch (selectedBlendMode) {
+		case kBlendModeNormal:
+			dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineState());
+			break;
+		case kBlendModeAdd:
+			dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateBlendModeAdd());
+			break;
+		case kBlendModeSubtract:
+			dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateBlendModeSubtract());
+			break;
+		case kBlendModeMultiply:
+			dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateBlendModeMultiply());
+			break;
+		case kBlendModeScreen:
+			dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateBlendModeScreen());
+			break;
+		}
 		// 平面オブジェクトの描画
 		plane.Draw(uvCheckerGH);
 

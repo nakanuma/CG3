@@ -66,6 +66,10 @@ public:
 
 		// BlendStateの設定
 		SetBlendState();
+		SetBlendStateAdd();
+		SetBlendStateSubtract();
+		SetBlendStateMultiply();
+		SetBlendStateScreen();
 
 		// RasterizerStateの設定
 		SetRasterizerState();
