@@ -251,6 +251,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓ ここから3Dオブジェクトの描画コマンド
 		/// 
 
+		/*dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateBlendModeAdd());*/
 		// 平面オブジェクトの描画
 		plane.Draw(uvCheckerGH);
 
