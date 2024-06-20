@@ -323,6 +323,13 @@ D3D12_BLEND_DESC DirectXBase::SetBlendState()
 	return blendDesc_;
 }
 
+D3D12_BLEND_DESC DirectXBase::SetBlendStateNone()
+{
+	blendDescNone_.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+	return blendDescNone_;
+}
+
 D3D12_BLEND_DESC DirectXBase::SetBlendStateAdd()
 {
 	blendDescAdd_.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
@@ -430,6 +437,10 @@ void DirectXBase::CreatePipelineStateObject()
 	/// BlendMode変更用のPSOを生成
 	/// 
 
+	//　無し
+	graphicsPipelineStateDesc.BlendState = blendDescNone_;
+	graphicsPipelineStateBlendModeNone_ = nullptr;
+	result = device_->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineStateBlendModeNone_));
 	//　加算
 	graphicsPipelineStateDesc.BlendState = blendDescAdd_;
 	graphicsPipelineStateBlendModeAdd_ = nullptr;

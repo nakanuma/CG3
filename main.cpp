@@ -27,14 +27,16 @@ struct DirectionalLight {
 
 enum BlendMode {
 	kBlendModeNormal,
+	kBlendModeNone,
 	kBlendModeAdd,
 	kBlendModeSubtract,
 	kBlendModeMultiply,
 	kBlendModeScreen
 };
 
-const char* BlendModeNames[5] = {
+const char* BlendModeNames[6] = {
 	"kBlendModeNormal",
+	"kBlendModeNone",
 	"kBlendModeAdd",
 	"kBlendModeSubtract",
 	"kBlendModeMultiply",
@@ -67,14 +69,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	/// 
 
 	// モデル読み込み
-	ModelData planeModel = ModelManager::LoadObjFile("resources/Models", "plane.obj", dxBase->GetDevice());
+	ModelData fenceModel = ModelManager::LoadObjFile("resources/Models", "fence.obj", dxBase->GetDevice());
 
 	// 平面オブジェクトの生成
-	Object3D plane;
+	Object3D fence;
 	// モデルを指定
-	plane.model_ = &planeModel;
+	fence.model_ = &fenceModel;
 	// 初期回転角を設定
-	plane.transform_.rotate.y = 3.0f;
+	fence.transform_.rotate = { 0.3f, 3.1f, 0.0f };
 
 	///
 	///	↑ ここまで3Dオブジェクトの設定
@@ -224,7 +226,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//////////////////////////////////////////////////////
 
 		// 平面オブジェクトの行列更新
-		plane.UpdateMatrix();
+		fence.UpdateMatrix();
 
 		// Sprite用のWorldViewProjectionMatrixを作る
 		Matrix worldMatrixSprite = transformSprite.MakeAffineMatrix();
@@ -243,13 +245,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		// ImGui
 		ImGui::Begin("Settings");
-		ImGui::DragFloat3("translate", &plane.transform_.translate.x, 0.01f);
-		ImGui::DragFloat3("rotate", &plane.transform_.rotate.x, 0.01f);
-		ImGui::DragFloat3("scale", &plane.transform_.scale.x, 0.01f);
-		ImGui::ColorEdit4("color", &plane.materialCB_.data_->color.x);
+		ImGui::DragFloat3("translate", &fence.transform_.translate.x, 0.01f);
+		ImGui::DragFloat3("rotate", &fence.transform_.rotate.x, 0.01f);
+		ImGui::DragFloat3("scale", &fence.transform_.scale.x, 0.01f);
+		ImGui::ColorEdit4("color", &fence.materialCB_.data_->color.x);
 		ImGui::DragFloat("Intensity", &directionalLightData->intensity, 0.01f);
 		if (ImGui::BeginCombo("Blend", BlendModeNames[selectedBlendMode])) {
-			for (int n = 0; n < 5; n++) {
+			for (int n = 0; n < 6; n++) {
 				const bool isSelected = (selectedBlendMode == n);
 				if (ImGui::Selectable(BlendModeNames[n], isSelected))
 					selectedBlendMode = static_cast<BlendMode>(n);
@@ -280,6 +282,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		case kBlendModeNormal:
 			dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineState());
 			break;
+		case kBlendModeNone:
+			dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateBlendModeNone());
+			break;
 		case kBlendModeAdd:
 			dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateBlendModeAdd());
 			break;
@@ -294,7 +299,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			break;
 		}
 		// 平面オブジェクトの描画
-		plane.Draw(uvCheckerGH);
+		fence.Draw();
 
 		///
 		/// ↑ ここまで3Dオブジェクトの描画コマンド
