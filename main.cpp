@@ -50,6 +50,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	///	↓ ここから3Dオブジェクトの設定
 	/// 
 
+	// モデル読み込み
+	ModelData planeModel = ModelManager::LoadObjFile("resources/Models", "plane.obj", dxBase->GetDevice());
+
+	// 平面オブジェクトの生成
+	Object3D plane;
+	// モデルを指定
+	plane.model_ = &planeModel;
+	// 初期回転角を設定
+	plane.transform_.rotate.y = 3.0f;
+
 	///
 	///	↑ ここまで3Dオブジェクトの設定
 	/// 
@@ -199,6 +209,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//////////////////////////////////////////////////////
 
+		// 平面オブジェクトの行列更新
+		plane.UpdateMatrix();
 
 		// Sprite用のWorldViewProjectionMatrixを作る
 		Matrix worldMatrixSprite = transformSprite.MakeAffineMatrix();
@@ -217,7 +229,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		// ImGui
 		ImGui::Begin("Settings");
-
+		ImGui::DragFloat3("translate", &plane.transform_.translate.x, 0.01f);
+		ImGui::DragFloat3("rotate", &plane.transform_.rotate.x, 0.01f);
+		ImGui::DragFloat3("scale", &plane.transform_.scale.x, 0.01f);
+		ImGui::ColorEdit4("color", &plane.materialCB_.data_->color.x);
+		ImGui::DragFloat("Intensity", &directionalLightData->intensity, 0.01f);
 		ImGui::End();
 
 		//////////////////////////////////////////////////////
@@ -235,6 +251,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓ ここから3Dオブジェクトの描画コマンド
 		/// 
 
+		// 平面オブジェクトの描画
+		plane.Draw(uvCheckerGH);
 
 		///
 		/// ↑ ここまで3Dオブジェクトの描画コマンド
