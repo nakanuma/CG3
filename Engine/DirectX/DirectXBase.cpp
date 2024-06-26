@@ -399,10 +399,10 @@ D3D12_RASTERIZER_DESC DirectXBase::SetRasterizerState()
 void DirectXBase::ShaderCompile()
 {
 	// Shaderをコンパイルする
-	vertexShaderBlob_ = CompileShader(L"resources/Shaders/Object3D.VS.hlsl", L"vs_6_0", dxcUtils_, dxcCompiler_, includeHandler_);
+	vertexShaderBlob_ = CompileShader(L"resources/Shaders/Particle.VS.hlsl", L"vs_6_0", dxcUtils_, dxcCompiler_, includeHandler_);
 	assert(vertexShaderBlob_ != nullptr);
 
-	pixelShaderBlob_ = CompileShader(L"resources/Shaders/Object3D.PS.hlsl", L"ps_6_0", dxcUtils_, dxcCompiler_, includeHandler_);
+	pixelShaderBlob_ = CompileShader(L"resources/Shaders/Particle.PS.hlsl", L"ps_6_0", dxcUtils_, dxcCompiler_, includeHandler_);
 	assert(pixelShaderBlob_ != nullptr);
 }
 
