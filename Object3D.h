@@ -3,17 +3,13 @@
 #include "ModelManager.h"
 #include "TextureManager.h"
 #include "ConstBuffer.h"
+#include "StructuredBuffer.h"
 
 struct Material {
 	Float4 color;
 	int32_t enableLighting;
 	float padding[3];
 	Matrix uvTransform;
-};
-
-struct TransformationMatrix {
-	Matrix WVP;
-	Matrix World;
 };
 
 class Object3D
@@ -28,6 +24,8 @@ public:
 	void Draw();
 
 	void Draw(const int TextureHandle);
+
+	void DrawInstancing(StructuredBuffer<TransformationMatrix>& structuredBuffer);
 
 	// マテリアルの定数バッファ
 	ConstBuffer<Material>materialCB_;

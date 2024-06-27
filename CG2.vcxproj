@@ -68,6 +68,7 @@
     <ClInclude Include="Object3D.h" />
     <ClInclude Include="OutlinedObject.h" />
     <ClInclude Include="Particle.h" />
+    <ClInclude Include="StructuredBuffer.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <ItemGroup>

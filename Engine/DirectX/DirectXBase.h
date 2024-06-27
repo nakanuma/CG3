@@ -59,7 +59,9 @@ public:
 		InitializeDXC();
 
 		// RootSignature生成
-		CreateRootSignature();
+		/*CreateRootSignature();*/
+		// RootSignature生成(Particle用)
+		CreateRootSignatureParticle();
 
 		// InputLayoutの設定
 		SetInputLayout();
@@ -102,6 +104,8 @@ public:
 	void InitializeDXC();
 	// RootSignature生成
 	void CreateRootSignature();
+	// RootSignature生成(Particle用)
+	void CreateRootSignatureParticle();
 	// InputLayoutの設定
 	void SetInputLayout();
 	// BlendStateの設定
