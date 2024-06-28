@@ -57,7 +57,7 @@ void Object3D::Draw(const int TextureHandle)
 	dxBase->GetCommandList()->DrawInstanced(UINT(model_->vertices.size()), 1, 0, 0);
 }
 
-void Object3D::DrawInstancing(StructuredBuffer<ParticleForGPU>& structuredBuffer)
+void Object3D::DrawInstancing(StructuredBuffer<ParticleForGPU>& structuredBuffer, uint32_t numInstance)
 {
 	DirectXBase* dxBase = DirectXBase::GetInstance();
 
@@ -70,5 +70,5 @@ void Object3D::DrawInstancing(StructuredBuffer<ParticleForGPU>& structuredBuffer
 	// SRVのDescriptorTableの先頭を設定（Textureの設定）
 	TextureManager::SetDescriptorTable(2, dxBase->GetCommandList(), model_->material.textureHandle); // モデルデータに格納されたテクスチャを使用する
 	// 描画を行う（DrawCall/ドローコール）
-	dxBase->GetCommandList()->DrawInstanced(UINT(model_->vertices.size()), structuredBuffer.numInstance_, 0, 0);
+	dxBase->GetCommandList()->DrawInstanced(UINT(model_->vertices.size()), numInstance, 0, 0);
 }

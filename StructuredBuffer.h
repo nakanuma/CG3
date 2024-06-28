@@ -7,13 +7,13 @@
 template<class Type>class StructuredBuffer {
 public:
 	// trueを指定した場合には空で生成される
-	StructuredBuffer(uint32_t numInstance, bool isEmpty = false) : numInstance_(numInstance) { 
+	StructuredBuffer(uint32_t numInstance, bool isEmpty = false) : numMaxInstance_(numInstance) { 
 		if (!isEmpty)Create(); 
 	};
 
 	void Create() {
 		// リソースを作る
-		resource_ = CreateBufferResource(DirectXBase::GetInstance()->GetDevice(), sizeof(Type) * numInstance_);
+		resource_ = CreateBufferResource(DirectXBase::GetInstance()->GetDevice(), sizeof(Type) * numMaxInstance_);
 		// データを書き込む
 		data_ = nullptr;
 		// 書き込むためのアドレスを取得
@@ -37,7 +37,7 @@ public:
 	StructuredBuffer& operator=(StructuredBuffer&&) = delete;
 
 
-	uint32_t numInstance_; // インスタンス数
+	uint32_t numMaxInstance_; // インスタンス数
 	uint32_t heapIndex_;
 };
 
@@ -50,7 +50,7 @@ inline void StructuredBuffer<Type>::CreateSRV()
 	instancingSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	instancingSrvDesc.Buffer.FirstElement = 0;
 	instancingSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	instancingSrvDesc.Buffer.NumElements = numInstance_;
+	instancingSrvDesc.Buffer.NumElements = numMaxInstance_;
 	instancingSrvDesc.Buffer.StructureByteStride = sizeof(Type);
 	D3D12_CPU_DESCRIPTOR_HANDLE instancingSrvHandleCPU = TextureManager::GetInstance().srvHeap_.GetCPUHandle(TextureManager::GetIndex());
 	heapIndex_ = TextureManager::GetIndex(); // heapのIndexを記録
