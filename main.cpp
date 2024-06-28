@@ -2,6 +2,7 @@
 #include <cstdint> 
 #include <assert.h>
 #include <random>
+#include <numbers>
 
 // MyClass 
 #include "MyWindow.h"
@@ -39,7 +40,7 @@ Particle MakeNewParticle(std::mt19937& randomEngine) {
 	std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
 	Particle particle;
 	particle.transform.scale = { 1.0f, 1.0f, 1.0f };
-	particle.transform.rotate = { 0.0f, 3.1f, 0.0f };
+	particle.transform.rotate = { 0.0f, 0.0f, 0.0f };
 	particle.transform.translate = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 
@@ -80,7 +81,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// COMの初期化
 	CoInitializeEx(0, COINIT_MULTITHREADED);
-	 
+
 	// ウィンドウの生成
 	Window::Create(L"CG2WindowClass", 1280, 720);
 
@@ -97,13 +98,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	///
 	/// ↓ その他変数
 	/// 
-	
+
 	// Δtを定義
 	const float kDeltaTime = 1.0f / 60.0f;
 
 	// 乱数生成器の初期化
 	std::random_device seedGenerator;
 	std::mt19937 randomEngine(seedGenerator());
+
+	// 反対側に回す回転行列
+	Matrix backToFrontMatrix = Matrix::RotationY(std::numbers::pi_v<float>);
+	// billboard行列
+	Matrix billboardMatrix;
+	// billboardを適用するかどうか
+	bool useBillBoard = true;
+	// Updateを行うかどうか
+	bool isParticleUpdate = false;
 
 	///
 	/// ↑ その他変数
@@ -250,7 +260,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	/// 
 
 	// カメラのインスタンスを生成
-	Camera camera{ {0.0f, 0.0f, -10.0f}, {0.0f, 0.0f, 0.0f}, 0.45f };
+	Camera camera{ {0.0f, 23.0f, 10.0f}, {std::numbers::pi_v<float> / 3.0f, std::numbers::pi_v<float>, 0.0f}, 0.45f };
 	Camera::Set(&camera);
 
 	// Textureを読み込む
@@ -265,7 +275,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	};
 
 	// 選択されたブレンドモードを保存する変数
-	static BlendMode selectedBlendMode = kBlendModeAdd;
+	static BlendMode selectedBlendMode = kBlendModeNormal;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (!Window::ProcessMessage()) {
@@ -305,6 +315,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		uvTransformMatrix = uvTransformMatrix * Matrix::Translation(uvTransformSprite.translate);
 		materialDataSprite->uvTransform = uvTransformMatrix;
 
+
+		Matrix cameraMatrix = Camera::GetCurrent()->MakeViewMatrix();
+		if (useBillBoard) {
+			billboardMatrix = backToFrontMatrix * cameraMatrix;
+			billboardMatrix.r[3][0] = 0.0f;
+			billboardMatrix.r[3][1] = 0.0f;
+			billboardMatrix.r[3][2] = 0.0f;
+		} else {
+			billboardMatrix = Matrix::Identity();
+		}
+
 		uint32_t numInstance = 0; // 描画すべきインスタンス数
 		for (uint32_t index = 0; index < instancingBuffer.numMaxInstance_; ++index) {
 			if (particles[index].lifeTime <= particles[index].currentTime) { // 生存期間を過ぎていたら更新せず描画対象にしｔない
@@ -314,16 +335,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Matrix viewMatrix = Camera::GetCurrent()->MakeViewMatrix();
 			Matrix projectionMatrix = Camera::GetCurrent()->MakePerspectiveFovMatrix();
 			Matrix viewProjectionMatrix = viewMatrix * projectionMatrix;
-			Matrix worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
-			particles[index].transform.translate += particles[index].velocity * kDeltaTime;
-			particles[index].currentTime += kDeltaTime; // 経過時間を足す
+
+			// パーティクルのビルボード行列を適用
+			Matrix worldViewProjectionMatrix = worldMatrix * billboardMatrix * viewProjectionMatrix;
+
 			instancingBuffer.data_[index].WVP = worldViewProjectionMatrix;
 			instancingBuffer.data_[index].World = worldMatrix;
 			instancingBuffer.data_[index].color = particles[index].color; // パーティクルの色をそのままコピー
 			++numInstance; // 生きているParticleの数を1つカウントする
 
-			float alpha = 1.0f - (particles[index].currentTime / particles[index].lifeTime); // 経過時間に応じたAlpha値を算出
-			instancingBuffer.data_[index].color.w = alpha; // GPUに送る
+			// 移動とa値の更新
+			if (isParticleUpdate) {
+				particles[index].transform.translate += particles[index].velocity * kDeltaTime;
+				particles[index].currentTime += kDeltaTime; // 経過時間を足す
+
+				float alpha = 1.0f - (particles[index].currentTime / particles[index].lifeTime); // 経過時間に応じたAlpha値を算出
+				instancingBuffer.data_[index].color.w = alpha; // GPUに送る
+			}
 		}
 
 
@@ -334,6 +362,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("scale", &plane.transform_.scale.x, 0.01f);
 		ImGui::ColorEdit4("color", &plane.materialCB_.data_->color.x);
 		ImGui::DragFloat("Intensity", &directionalLightData->intensity, 0.01f);
+		ImGui::DragFloat3("Camera translate", &camera.transform.translate.x, 0.01f);
+		ImGui::DragFloat3("Camera Rotate", &camera.transform.rotate.x, 0.01f);
 		if (ImGui::BeginCombo("Blend", BlendModeNames[selectedBlendMode])) {
 			for (int n = 0; n < 6; n++) {
 				const bool isSelected = (selectedBlendMode == n);
@@ -344,6 +374,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 			ImGui::EndCombo();
 		}
+		ImGui::Checkbox("update", &isParticleUpdate);
+		ImGui::Checkbox("useBillboard", &useBillBoard);
 		ImGui::End();
 
 		//////////////////////////////////////////////////////
