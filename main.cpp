@@ -255,6 +255,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// Textureを読み込む
 	uint32_t uvCheckerGH = TextureManager::Load("resources/Images/uvChecker.png", dxBase->GetDevice());
+	uint32_t circleGH = TextureManager::Load("resources/Images/circle.png", dxBase->GetDevice());
 
 	// UVTransform用の変数を用意
 	Transform uvTransformSprite{
@@ -264,7 +265,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	};
 
 	// 選択されたブレンドモードを保存する変数
-	static BlendMode selectedBlendMode = kBlendModeNormal;
+	static BlendMode selectedBlendMode = kBlendModeAdd;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (!Window::ProcessMessage()) {
@@ -382,7 +383,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			break;
 		}
 		// 平面オブジェクトの描画
-		plane.DrawInstancing(instancingBuffer, numInstance);
+		plane.DrawInstancing(instancingBuffer, numInstance, circleGH); // Textureにcircleを指定
 
 		///
 		/// ↑ ここまで3Dオブジェクトの描画コマンド
