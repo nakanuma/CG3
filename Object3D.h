@@ -12,6 +12,12 @@ struct Material {
 	Matrix uvTransform;
 };
 
+struct ParticleForGPU {
+	Matrix WVP;
+	Matrix World;
+	Float4 color;
+};
+
 class Object3D
 {
 public:
@@ -25,7 +31,7 @@ public:
 
 	void Draw(const int TextureHandle);
 
-	void DrawInstancing(StructuredBuffer<TransformationMatrix>& structuredBuffer);
+	void DrawInstancing(StructuredBuffer<ParticleForGPU>& structuredBuffer);
 
 	// マテリアルの定数バッファ
 	ConstBuffer<Material>materialCB_;

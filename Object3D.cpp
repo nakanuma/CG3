@@ -57,7 +57,7 @@ void Object3D::Draw(const int TextureHandle)
 	dxBase->GetCommandList()->DrawInstanced(UINT(model_->vertices.size()), 1, 0, 0);
 }
 
-void Object3D::DrawInstancing(StructuredBuffer<TransformationMatrix>& structuredBuffer)
+void Object3D::DrawInstancing(StructuredBuffer<ParticleForGPU>& structuredBuffer)
 {
 	DirectXBase* dxBase = DirectXBase::GetInstance();
 

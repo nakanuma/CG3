@@ -29,6 +29,7 @@ struct DirectionalLight {
 struct Particle {
 	Transform transform;
 	Float3 velocity;
+	Float4 color;
 };
 
 // パーティクルの生成関数
@@ -39,6 +40,10 @@ Particle MakeNewParticle(std::mt19937& randomEngine) {
 	particle.transform.rotate = { 0.0f, 3.1f, 0.0f };
 	particle.transform.translate = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
 	particle.velocity = { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+
+	// 色をランダムに初期化
+	std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
+	particle.color = { distColor(randomEngine), distColor(randomEngine), distColor(randomEngine), 1.0f };
 
 	return particle;
 }
@@ -113,12 +118,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// StructuredBufferの作成
-	StructuredBuffer<TransformationMatrix> instancingBuffer(10);
+	StructuredBuffer<ParticleForGPU> instancingBuffer(10);
 
 	// 単位行列を書き込んでおく
 	for (uint32_t index = 0; index < instancingBuffer.numInstance_; ++index) {
 		instancingBuffer.data_[index].WVP = Matrix::Identity();
 		instancingBuffer.data_[index].World = Matrix::Identity();
+		instancingBuffer.data_[index].color = Float4(1.0f, 1.0f, 1.0f, 1.0f); // とりあえず白を書き込む
 	}
 
 	Particle particles[10];
@@ -300,6 +306,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Matrix worldViewProjectionMatrix = worldMatrix * viewProjectionMatrix;
 			instancingBuffer.data_[index].WVP = worldViewProjectionMatrix;
 			instancingBuffer.data_[index].World = worldMatrix;
+			instancingBuffer.data_[index].color = particles[index].color; // パーティクルの色をそのままコピー
 
 			// 速度を反映
 			particles[index].transform.translate += particles[index].velocity * kDeltaTime;
