@@ -320,6 +320,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			instancingBuffer.data_[index].World = worldMatrix;
 			instancingBuffer.data_[index].color = particles[index].color; // パーティクルの色をそのままコピー
 			++numInstance; // 生きているParticleの数を1つカウントする
+
+			float alpha = 1.0f - (particles[index].currentTime / particles[index].lifeTime); // 経過時間に応じたAlpha値を算出
+			instancingBuffer.data_[index].color.w = alpha; // GPUに送る
 		}
 
 
