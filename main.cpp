@@ -144,10 +144,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		instancingBuffer.data_[index].color = Float4(1.0f, 1.0f, 1.0f, 1.0f); // とりあえず白を書き込む
 	}
 
-	Particle particles[10];
-	for (uint32_t index = 0; index < instancingBuffer.numMaxInstance_; ++index) {
+	std::list<Particle> particles;
+	/*for (uint32_t index = 0; index < instancingBuffer.numMaxInstance_; ++index) {
 		particles[index] = MakeNewParticle(randomEngine);
-	}
+	}*/
 
 	///
 	///	↑ ここまで3Dオブジェクトの設定
@@ -327,11 +327,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 
 		uint32_t numInstance = 0; // 描画すべきインスタンス数
-		for (uint32_t index = 0; index < instancingBuffer.numMaxInstance_; ++index) {
-			if (particles[index].lifeTime <= particles[index].currentTime) { // 生存期間を過ぎていたら更新せず描画対象にしｔない
+		for (std::list<Particle>::iterator particleIterator = particles.begin();
+			particleIterator != particles.end();) {
+			if ((*particleIterator).lifeTime <= (*particleIterator).currentTime) {
+				particleIterator = particles.erase(particleIterator); // 生存期間が過ぎたParticleはlistから消す。戻り値が次のイテレーターとなる
 				continue;
 			}
-			Matrix worldMatrix = particles[index].transform.MakeAffineMatrix();
+			Matrix worldMatrix = particleIterator->transform.MakeAffineMatrix();
 			Matrix viewMatrix = Camera::GetCurrent()->MakeViewMatrix();
 			Matrix projectionMatrix = Camera::GetCurrent()->MakePerspectiveFovMatrix();
 			Matrix viewProjectionMatrix = viewMatrix * projectionMatrix;
@@ -339,19 +341,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// パーティクルのビルボード行列を適用
 			Matrix worldViewProjectionMatrix = worldMatrix * billboardMatrix * viewProjectionMatrix;
 
-			instancingBuffer.data_[index].WVP = worldViewProjectionMatrix;
-			instancingBuffer.data_[index].World = worldMatrix;
-			instancingBuffer.data_[index].color = particles[index].color; // パーティクルの色をそのままコピー
+			instancingBuffer.data_[numInstance].WVP = worldViewProjectionMatrix;
+			instancingBuffer.data_[numInstance].World = worldMatrix;
+			instancingBuffer.data_[numInstance].color = particleIterator->color; // パーティクルの色をそのままコピー
 			++numInstance; // 生きているParticleの数を1つカウントする
 
 			// 移動とa値の更新
 			if (isParticleUpdate) {
-				particles[index].transform.translate += particles[index].velocity * kDeltaTime;
-				particles[index].currentTime += kDeltaTime; // 経過時間を足す
+				particleIterator->transform.translate += particleIterator->velocity * kDeltaTime;
+				particleIterator->currentTime += kDeltaTime; // 経過時間を足す
 
-				float alpha = 1.0f - (particles[index].currentTime / particles[index].lifeTime); // 経過時間に応じたAlpha値を算出
-				instancingBuffer.data_[index].color.w = alpha; // GPUに送る
+				float alpha = 1.0f - (particleIterator->currentTime / particleIterator->lifeTime); // 経過時間に応じたAlpha値を算出
+				instancingBuffer.data_[numInstance].color.w = alpha; // GPUに送る
 			}
+
+			++particleIterator; // 次のイテレータに進める
 		}
 
 
@@ -376,6 +380,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		ImGui::Checkbox("update", &isParticleUpdate);
 		ImGui::Checkbox("useBillboard", &useBillBoard);
+		if (ImGui::Button("Add Particle")) {
+			particles.push_back(MakeNewParticle(randomEngine));
+			particles.push_back(MakeNewParticle(randomEngine));
+			particles.push_back(MakeNewParticle(randomEngine));
+		}
 		ImGui::End();
 
 		//////////////////////////////////////////////////////
