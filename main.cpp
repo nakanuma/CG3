@@ -56,6 +56,21 @@ Particle MakeNewParticle(std::mt19937& randomEngine) {
 	return particle;
 }
 
+struct Emitter {
+	Transform transform; //!< エミッタのTransform
+	uint32_t count; //!< 発生数
+	float frequency; //!< 発生頻度
+	float frequencyTime; // !< 頻度用時刻
+};
+
+std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine) {
+	std::list<Particle> particles;
+	for (uint32_t count = 0; count < emitter.count; ++count) {
+		particles.push_back(MakeNewParticle(randomEngine));
+	}
+	return particles;
+}
+
 enum BlendMode {
 	kBlendModeNormal,
 	kBlendModeNone,
@@ -135,7 +150,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// StructuredBufferの作成
-	StructuredBuffer<ParticleForGPU> instancingBuffer(10);
+	StructuredBuffer<ParticleForGPU> instancingBuffer(100); // 最大インスタンス数を設定
 
 	// 単位行列を書き込んでおく
 	for (uint32_t index = 0; index < instancingBuffer.numMaxInstance_; ++index) {
@@ -145,9 +160,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 	std::list<Particle> particles;
-	/*for (uint32_t index = 0; index < instancingBuffer.numMaxInstance_; ++index) {
-		particles[index] = MakeNewParticle(randomEngine);
-	}*/
+
+	Emitter emitter{};
+	emitter.count = 3;
+	emitter.frequency = 0.5f; // 0.5秒ごとに発生
+	emitter.frequencyTime = 0.0f; // 発生頻度用の時刻、0で初期化
 
 	///
 	///	↑ ここまで3Dオブジェクトの設定
@@ -341,10 +358,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// パーティクルのビルボード行列を適用
 			Matrix worldViewProjectionMatrix = worldMatrix * billboardMatrix * viewProjectionMatrix;
 
-			instancingBuffer.data_[numInstance].WVP = worldViewProjectionMatrix;
-			instancingBuffer.data_[numInstance].World = worldMatrix;
-			instancingBuffer.data_[numInstance].color = particleIterator->color; // パーティクルの色をそのままコピー
-			++numInstance; // 生きているParticleの数を1つカウントする
+			if (numInstance < instancingBuffer.numMaxInstance_) { // パーティクルのインスタンス数がバッファのサイズを超えないようにする
+				instancingBuffer.data_[numInstance].WVP = worldViewProjectionMatrix;
+				instancingBuffer.data_[numInstance].World = worldMatrix;
+				instancingBuffer.data_[numInstance].color = particleIterator->color; // パーティクルの色をそのままコピー
+				++numInstance; // 生きているParticleの数を1つカウントする
+			}
 
 			// 移動とa値の更新
 			if (isParticleUpdate) {
@@ -358,6 +377,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			++particleIterator; // 次のイテレータに進める
 		}
 
+		// Emitterの更新を行い、経過時間によってParticleを発生させる
+		emitter.frequencyTime += kDeltaTime; // 時刻を進める
+		if (emitter.frequency <= emitter.frequencyTime) { // 発生時刻より大きいなら発生
+			particles.splice(particles.end(), Emit(emitter, randomEngine)); // 発生処理
+			emitter.frequencyTime -= emitter.frequency; // 余計に過ぎた時間も加味して頻度計算する
+		}
 
 		// ImGui
 		ImGui::Begin("Settings");
@@ -381,9 +406,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Checkbox("update", &isParticleUpdate);
 		ImGui::Checkbox("useBillboard", &useBillBoard);
 		if (ImGui::Button("Add Particle")) {
-			particles.push_back(MakeNewParticle(randomEngine));
-			particles.push_back(MakeNewParticle(randomEngine));
-			particles.push_back(MakeNewParticle(randomEngine));
+			particles.splice(particles.end(), Emit(emitter, randomEngine));
 		}
 		ImGui::End();
 
