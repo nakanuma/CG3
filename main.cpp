@@ -27,6 +27,7 @@ struct DirectionalLight {
 	float intensity; // 輝度
 };
 
+// パーティクル
 struct Particle {
 	Transform transform;
 	Float3 velocity;
@@ -59,6 +60,7 @@ Particle MakeNewParticle(std::mt19937& randomEngine, const Float3& translate) {
 	return particle;
 }
 
+// エミッター
 struct Emitter {
 	Transform transform; //!< エミッタのTransform
 	uint32_t count; //!< 発生数
@@ -66,6 +68,7 @@ struct Emitter {
 	float frequencyTime; // !< 頻度用時刻
 };
 
+// パーティクルの発生関数
 std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine) {
 	std::list<Particle> particles;
 	for (uint32_t count = 0; count < emitter.count; ++count) {
@@ -73,6 +76,12 @@ std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine) {
 	}
 	return particles;
 }
+
+// Field
+struct AccelerationField {
+	Float3 acceleration; //!< 加速度
+	AABB area; //!< 範囲
+};
 
 enum BlendMode {
 	kBlendModeNormal,
@@ -131,7 +140,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// billboardを適用するかどうか
 	bool useBillBoard = true;
 	// Updateを行うかどうか
-	bool isParticleUpdate = true;
+	bool isFieldUpdate = true;
 
 	///
 	/// ↑ その他変数
@@ -162,8 +171,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		instancingBuffer.data_[index].color = Float4(1.0f, 1.0f, 1.0f, 1.0f); // とりあえず白を書き込む
 	}
 
+	// Particle
 	std::list<Particle> particles;
 
+	// Emitter
 	Emitter emitter{};
 	emitter.count = 3;
 	emitter.frequency = 0.5f; // 0.5秒ごとに発生
@@ -172,6 +183,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	emitter.transform.translate = { 0.0f, 0.0f, 0.0f };
 	emitter.transform.rotate = { 0.0f, 0.0f, 0.0f };
 	emitter.transform.scale = { 1.0f, 1.0f, 1.0f };
+
+	// Field
+	AccelerationField accelerationField;
+	accelerationField.acceleration = { 15.0f, 0.0f, 0.0f };
+	accelerationField.area.min = { -1.0f, -1.0f, -1.0f };
+	accelerationField.area.max = { 1.0f, 1.0f, 1.0f };
 
 	///
 	///	↑ ここまで3Dオブジェクトの設定
@@ -372,14 +389,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				++numInstance; // 生きているParticleの数を1つカウントする
 			}
 
-			// 移動とa値の更新
-			if (isParticleUpdate) {
-				particleIterator->transform.translate += particleIterator->velocity * kDeltaTime;
-				particleIterator->currentTime += kDeltaTime; // 経過時間を足す
-
-				float alpha = 1.0f - (particleIterator->currentTime / particleIterator->lifeTime); // 経過時間に応じたAlpha値を算出
-				instancingBuffer.data_[numInstance].color.w = alpha; // GPUに送る
+			// Fieldの範囲内のParticleには加速度を適用する
+			if (isFieldUpdate) {
+				if (IsCollision(accelerationField.area, particleIterator->transform.translate)) {
+					particleIterator->velocity += accelerationField.acceleration * kDeltaTime;
+				}
 			}
+
+			// 移動とa値の更新
+			particleIterator->transform.translate += particleIterator->velocity * kDeltaTime;
+			particleIterator->currentTime += kDeltaTime; // 経過時間を足す
+
+			float alpha = 1.0f - (particleIterator->currentTime / particleIterator->lifeTime); // 経過時間に応じたAlpha値を算出
+			instancingBuffer.data_[numInstance].color.w = alpha; // GPUに送る
+
 
 			++particleIterator; // 次のイテレータに進める
 		}
@@ -410,7 +433,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 			ImGui::EndCombo();
 		}
-		ImGui::Checkbox("update", &isParticleUpdate);
+		ImGui::Checkbox("update", &isFieldUpdate);
 		ImGui::Checkbox("useBillboard", &useBillBoard);
 		if (ImGui::Button("Add Particle")) {
 			particles.splice(particles.end(), Emit(emitter, randomEngine));
