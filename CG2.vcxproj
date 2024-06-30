@@ -36,6 +36,7 @@
     <ClCompile Include="Object3D.cpp" />
     <ClCompile Include="OutlinedObject.cpp" />
     <ClCompile Include="Particle.cpp" />
+    <ClCompile Include="RTVManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ConstBuffer.h" />
@@ -68,9 +69,22 @@
     <ClInclude Include="Object3D.h" />
     <ClInclude Include="OutlinedObject.h" />
     <ClInclude Include="Particle.h" />
+    <ClInclude Include="RTVManager.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="resources\Shaders\InverseEffect.PS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="resources\Shaders\InverseEffect.VS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="resources\Shaders\Object3d.PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
@@ -105,6 +119,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="resources\Shaders\InverseEffect.hlsli" />
     <None Include="resources\Shaders\Object3d.hlsli" />
     <None Include="resources\Shaders\Toon.hlsli" />
   </ItemGroup>

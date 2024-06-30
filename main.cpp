@@ -18,6 +18,7 @@
 #include "Object3D.h"
 #include "OutlinedObject.h"
 #include "Emitter.h"
+#include "RTVManager.h"
 
 struct DirectionalLight {
 	Float4 color; // ライトの色
@@ -163,7 +164,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 	// CPUで動かす用のTransformを作る
-	Transform transformSprite{ {1.0f, 1.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f, 0.0f, 0.0f} };
+	Transform transformSprite{ {2.0f, 2.0f, 1.0f}, {0.0f,0.0f,0.0f}, {0.0f, 0.0f, 0.0f} };
 
 	///
 	///	↑ ここまでスプライトの設定
@@ -205,6 +206,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// 選択されたブレンドモードを保存する変数
 	static BlendMode selectedBlendMode = kBlendModeNormal;
 
+
+	// レンダーターゲットテクスチャを作成
+	uint32_t renderTextureGH = RTVManager::CreateRenderTargetTexture(Window::GetWidth(), Window::GetHeight());
+
+
 	// ウィンドウの×ボタンが押されるまでループ
 	while (!Window::ProcessMessage()) {
 		// フレーム開始処理
@@ -231,7 +237,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// Sprite用のWorldViewProjectionMatrixを作る
 		Matrix worldMatrixSprite = transformSprite.MakeAffineMatrix();
 		Matrix viewMatrixSprite = Matrix::Identity();
-		Matrix projectionMatrixSprite = Matrix::Orthographic(static_cast<float>(Window::GetWidth()), static_cast<float>(Window::GetHeight()), 0.0f, 1000.0f);
+		Matrix projectionMatrixSprite = 
+			Matrix::Orthographic(static_cast<float>(Window::GetWidth()), static_cast<float>(Window::GetHeight()), 0.0f, 1000.0f);
 		Matrix worldViewProjectionMatrixSprite = worldMatrixSprite * viewMatrixSprite * projectionMatrixSprite;
 		transformationMatrixDataSprite->WVP = worldViewProjectionMatrixSprite;
 		transformationMatrixDataSprite->World = worldMatrixSprite;
@@ -262,6 +269,41 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		ImGui::End();
 
+
+		ImGui::Begin("Texture");
+
+		//タブ等を除いたウィンドウのサイズを取得(計算)
+		ImVec2 cntRegionMax = ImGui::GetWindowContentRegionMax();
+		ImVec2 cntRegionMin = ImGui::GetWindowContentRegionMin();
+		ImVec2 wndSize = { cntRegionMax.x - cntRegionMin.x, cntRegionMax.y - cntRegionMin.y };
+
+		//元のアス比とImGuiウィンドウのアス比を比較
+		float imageAspectRatio = 
+			static_cast<float>(TextureManager::GetMetaData(renderTextureGH).width) 
+			/ static_cast<float>(TextureManager::GetMetaData(renderTextureGH).height);
+		float innerWindowAspectRatio = wndSize.x / wndSize.y;
+		ImVec2 finalImageSize = wndSize;
+
+		//横幅が大きかったら縦基準で画像サイズを決定
+		if (imageAspectRatio <= innerWindowAspectRatio)
+		{
+			finalImageSize.x *= imageAspectRatio / innerWindowAspectRatio;
+		}
+		//縦幅が大きかったら横基準で画像サイズを決定
+		else
+		{
+			finalImageSize.y *= innerWindowAspectRatio / imageAspectRatio;
+		}
+
+		//画像を中央に持ってくる
+		ImVec2 topLeft = { (wndSize.x - finalImageSize.x) * 0.5f + cntRegionMin.x,
+							(wndSize.y - finalImageSize.y) * 0.5f + cntRegionMin.y };
+		ImGui::SetCursorPos(topLeft);
+
+		ImGui::Image(reinterpret_cast<ImTextureID>(TextureManager::GetInstance().srvHeap_.GetGPUHandle(renderTextureGH).ptr), finalImageSize);
+
+		ImGui::End();
+
 		//////////////////////////////////////////////////////
 
 		///
@@ -276,6 +318,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 		/// ↓ ここから3Dオブジェクトの描画コマンド
 		/// 
+
+		// レンダーターゲットをレンダーテクスチャにセット
+		RTVManager::SetRenderTarget(renderTextureGH);
+		RTVManager::ClearRTV(renderTextureGH);
 
 		// 選択されたブレンドモードに変更
 		switch (selectedBlendMode) {
@@ -309,6 +355,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓ ここからスプライトの描画コマンド
 		/// 
 
+		RTVManager::SetRTtoBB();
+		// ポストエフェクト用のPSOを設定
+		dxBase->GetCommandList()->SetPipelineState(dxBase->GetPipelineStateInverseEffect());
 		// VBVを設定
 		dxBase->GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);
 		// IBVを設定
@@ -318,13 +367,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// TransformatinMatrixCBufferの場所を設定
 		dxBase->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
 		// SRVのDescriptorTableの先頭を設定
-		TextureManager::SetDescriptorTable(2, dxBase->GetCommandList(), uvCheckerGH);
+		TextureManager::SetDescriptorTable(2, dxBase->GetCommandList(), renderTextureGH);
 		// 描画（DrawCall/ドローコール）6個のインデックスを使用し1つのインスタンスを描画
-		/*dxBase->GetCommandList()->DrawIndexedInstanced(6, 1, 0, 0, 0);*/
+		dxBase->GetCommandList()->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 		///
 		/// ↑ ここまでスプライトの描画コマンド
 		/// 
+
+		// バックバッファにレンダーターゲットを戻す
+		/*RTVManager::SetRTtoBB();*/
 
 		// ImGuiの内部コマンドを生成する
 		ImguiWrapper::Render(dxBase->GetCommandList());

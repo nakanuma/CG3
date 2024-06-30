@@ -7,6 +7,7 @@
 #include "Logger.h"
 #include "StringUtil.h"
 #include "DirectXUtil.h"
+#include "RTVManager.h"
 
 DirectXBase::~DirectXBase()
 {
@@ -16,6 +17,8 @@ DirectXBase::~DirectXBase()
 	includeHandler_->Release();
 	vertexShaderBlob_->Release();
 	pixelShaderBlob_->Release();
+	vertexShaderBlobInverse_->Release();
+	pixelShaderBlobInverse_->Release();
 
 	Log("Released DirectXBase\n");
 }
@@ -160,7 +163,7 @@ void DirectXBase::CreateFinalRenderTargets()
 	HRESULT result = S_FALSE;
 
 	// ディスクリプタヒープの生成
-	rtvDescriptorHeap_.Create(device_.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
+	rtvDescriptorHeap_.Create(device_.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128, false);
 
 	// SwapChainからResourceを引っ張ってくる
 	swapChainResources_[0] = nullptr;
@@ -404,6 +407,13 @@ void DirectXBase::ShaderCompile()
 
 	pixelShaderBlob_ = CompileShader(L"resources/Shaders/Object3D.PS.hlsl", L"ps_6_0", dxcUtils_, dxcCompiler_, includeHandler_);
 	assert(pixelShaderBlob_ != nullptr);
+
+
+	vertexShaderBlobInverse_ = CompileShader(L"resources/Shaders/InverseEffect.VS.hlsl", L"vs_6_0", dxcUtils_, dxcCompiler_, includeHandler_);
+	assert(vertexShaderBlob_ != nullptr);
+
+	pixelShaderBlobInverse_ = CompileShader(L"resources/Shaders/InverseEffect.PS.hlsl", L"ps_6_0", dxcUtils_, dxcCompiler_, includeHandler_);
+	assert(pixelShaderBlob_ != nullptr);
 }
 
 void DirectXBase::CreatePipelineStateObject()
@@ -432,6 +442,9 @@ void DirectXBase::CreatePipelineStateObject()
 	graphicsPipelineState_ = nullptr;
 	result = device_->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState_));
 	assert(SUCCEEDED(result));
+
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDefault = graphicsPipelineStateDesc;
 
 	///
 	/// BlendMode変更用のPSOを生成
@@ -471,6 +484,15 @@ void DirectXBase::CreatePipelineStateObject()
 	// 生成
 	graphicsPipelineStateNoCulling_ = nullptr;
 	result = device_->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineStateNoCulling_));
+
+
+	// ポストエフェクト用のPSOを作成
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateInverseDesc = graphicsPipelineStateDefault;
+	graphicsPipelineStateInverseDesc.VS = { vertexShaderBlobInverse_->GetBufferPointer(), vertexShaderBlobInverse_->GetBufferSize() }; // VertexShader
+	graphicsPipelineStateInverseDesc.PS = { pixelShaderBlobInverse_->GetBufferPointer(), pixelShaderBlobInverse_->GetBufferSize() }; // PixelShader
+	// 生成
+	graphicsPipelineStateInverseEffect_ = nullptr;
+	result = device_->CreateGraphicsPipelineState(&graphicsPipelineStateInverseDesc, IID_PPV_ARGS(&graphicsPipelineStateInverseEffect_));
 }
 
 void DirectXBase::SetViewport()
@@ -594,11 +616,7 @@ void DirectXBase::PostDraw()
 	HRESULT result = S_FALSE;
 
 	// 画面に書く処理はすべて終わり、画面に映すので、状態を遷移
-	// 今回はRendertargetからPresentにする
-	barrier_.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrier_.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-	// TransitionBarrierを張る
-	commandList_->ResourceBarrier(1, &barrier_);
+	RTVManager::ResetResourceBarrier();
 
 	// コマンドリストの内容を確定させる
 	result = commandList_->Close();
@@ -619,9 +637,19 @@ ID3D12GraphicsCommandList* DirectXBase::GetCommandList()
 	return commandList_.Get();
 }
 
+IDXGISwapChain4* DirectXBase::GetSwapChain()
+{
+	return swapChain_.Get();
+}
+
 DXGI_SWAP_CHAIN_DESC1 DirectXBase::GetSwapChainDesc()
 {
 	return swapChainDesc_;
+}
+
+DescriptorHeap* DirectXBase::GetRTVHeap()
+{
+	return &rtvDescriptorHeap_;
 }
 
 D3D12_RENDER_TARGET_VIEW_DESC DirectXBase::GetRtvDesc()
