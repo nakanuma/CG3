@@ -70,14 +70,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	/// 
 
 	// モデル読み込み
-	ModelData fenceModel = ModelManager::LoadObjFile("resources/Models", "fence.obj", dxBase->GetDevice());
+	ModelData teapotModel = ModelManager::LoadObjFile("resources/Models", "teapot.obj", dxBase->GetDevice());
 
 	// 平面オブジェクトの生成
-	Object3D fence;
+	Object3D teapot;
 	// モデルを指定
-	fence.model_ = &fenceModel;
+	teapot.model_ = &teapotModel;
 	// 初期回転角を設定
-	fence.transform_.rotate = { 0.3f, 3.1f, 0.0f };
+	teapot.transform_.rotate = { 0.3f, 3.1f, 0.0f };
 
 	///
 	///	↑ ここまで3Dオブジェクトの設定
@@ -232,7 +232,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//////////////////////////////////////////////////////
 
 		// 平面オブジェクトの行列更新
-		fence.UpdateMatrix();
+		teapot.UpdateMatrix();
 
 		// Sprite用のWorldViewProjectionMatrixを作る
 		Matrix worldMatrixSprite = transformSprite.MakeAffineMatrix();
@@ -252,10 +252,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		// ImGui
 		ImGui::Begin("Settings");
-		ImGui::DragFloat3("translate", &fence.transform_.translate.x, 0.01f);
-		ImGui::DragFloat3("rotate", &fence.transform_.rotate.x, 0.01f);
-		ImGui::DragFloat3("scale", &fence.transform_.scale.x, 0.01f);
-		ImGui::ColorEdit4("color", &fence.materialCB_.data_->color.x);
+		ImGui::DragFloat3("translate", &teapot.transform_.translate.x, 0.01f);
+		ImGui::DragFloat3("rotate", &teapot.transform_.rotate.x, 0.01f);
+		ImGui::DragFloat3("scale", &teapot.transform_.scale.x, 0.01f);
+		ImGui::ColorEdit4("color", &teapot.materialCB_.data_->color.x);
 		ImGui::DragFloat("Intensity", &directionalLightData->intensity, 0.01f);
 		if (ImGui::BeginCombo("Blend", BlendModeNames[selectedBlendMode])) {
 			for (int n = 0; n < 6; n++) {
@@ -345,7 +345,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			break;
 		}
 		// 平面オブジェクトの描画
-		fence.Draw();
+		teapot.Draw();
 
 		///
 		/// ↑ ここまで3Dオブジェクトの描画コマンド
